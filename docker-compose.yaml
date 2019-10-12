@@ -4,10 +4,8 @@ services:
     image: mysql:5.7.27
     ports:
           - 3306:3306
-    # volumes:
-      # - ./master-scripts/:/docker-entrypoint-initdb.d/
-      # - ./master.conf:/etc/mysql/conf.d/mysql.cnf
-      # - mysql-data:/var/lib/mysql
+    volumes:
+      - ./schema.sql/:/docker-entrypoint-initdb.d/01_schema.sql
     environment:
       MYSQL_ALLOW_EMPTY_PASSWORD: "true"
       MYSQL_ROOT_PASSWORD: ""
