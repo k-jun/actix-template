@@ -1,40 +1,48 @@
+use crate::models::index_models;
 use actix_web::{
-  web::{Data, Json, Path, Query},
+  error::Error,
+  web::{Json, Path, Query},
   HttpRequest, HttpResponse, Responder,
 };
-
-use crate::models::index_models;
+#[macro_use]
+use serde_json::json;
 
 pub fn index(_req: HttpRequest) -> impl Responder {
   "Hello World!"
 }
 
-pub fn path((path, req): (Path<index_models::PathPath>, HttpRequest)) -> HttpResponse {
-  HttpResponse::Ok()
-    .content_type("application/json")
-    .json(index_models::PathResponse {
-      string: path.string.to_string(),
-      integer: path.integer,
-      float: path.float,
-    })
+pub fn path(path: Path<index_models::PathPath>) -> Result<HttpResponse, Error> {
+  Ok(
+    HttpResponse::Ok()
+      .content_type("application/json")
+      .json(json!({
+        "f_str": path.f_str.to_string(),
+        "f_int": path.f_int,
+        "f_flt": path.f_flt,
+      })),
+  )
 }
 
-pub fn query((query, req): (Query<index_models::QueryQuery>, HttpRequest)) -> HttpResponse {
-  HttpResponse::Ok()
-    .content_type("application/json")
-    .json(index_models::QueryResponse {
-      string: query.string.to_string(),
-      integer: query.integer,
-      float: query.float,
-    })
+pub fn query(query: Query<index_models::QueryQuery>) -> Result<HttpResponse, Error> {
+  Ok(
+    HttpResponse::Ok()
+      .content_type("application/json")
+      .json(json!({
+        "f_str": query.f_str.to_string(),
+        "f_int": query.f_int,
+        "f_flt": query.f_flt,
+      })),
+  )
 }
 
-pub fn body((body, req): (Json<index_models::BodyJson>, HttpRequest)) -> HttpResponse {
-  HttpResponse::Ok()
-    .content_type("application/json")
-    .json(index_models::BodyResponse {
-      string: body.string.to_string(),
-      integer: body.integer,
-      float: body.float,
-    })
+pub fn body(body: Json<index_models::BodyJson>) -> Result<HttpResponse, Error> {
+  Ok(
+    HttpResponse::Ok()
+      .content_type("application/json")
+      .json(json!({
+        "f_str": body.f_str.to_string(),
+        "f_int": body.f_int,
+        "f_flt": body.f_flt,
+      })),
+  )
 }
