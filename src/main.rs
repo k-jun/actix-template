@@ -65,12 +65,12 @@ fn main() {
     dotenv().ok();
     env_logger::init();
 
-    let db_url = env::var("DB_ADDRESS").unwrap();
-    let client_domain = env::var("CLIENT_DOMAIN").unwrap();
-    let bind_address = env::var("BIND_ADDRESS").unwrap();
+    let db_url = env::var("DB_ADDRESS").expect("could not find DB_ADDRESS");
+    let client_domain = env::var("CLIENT_DOMAIN").expect("could not find CLIENT_DOMAIN");
+    let bind_address = env::var("BIND_ADDRESS").expect("could not find BIND_ADDRESS");
 
     let state = AppState {
-        db: mysql::Pool::new(db_url).unwrap(),
+        db: mysql::Pool::new(db_url).expect("could not connect to db"),
     };
 
     // let mut listenfd = ListenFd::from_env();
@@ -87,5 +87,9 @@ fn main() {
             .configure(routes)
     });
 
-    server.bind(bind_address).unwrap().run().unwrap();
+    server
+        .bind(bind_address)
+        .expect("could not bind address")
+        .run()
+        .expect("could not run server");
 }
