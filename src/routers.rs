@@ -15,7 +15,11 @@ pub fn routes(app: &mut web::ServiceConfig) {
     )
     .service(
       web::scope("/todo")
-        .service(web::resource("").route(web::post().to(todo_controllers::create)))
+        .service(
+          web::resource("")
+            .route(web::get().to(todo_controllers::index))
+            .route(web::post().to(todo_controllers::create)),
+        )
         .service(
           web::resource("/{id}")
             .route(web::get().to(todo_controllers::read))
