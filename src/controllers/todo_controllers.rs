@@ -1,80 +1,79 @@
-use actix_web::{
-  web::{Data, Json, Path, Query},
-  HttpRequest, HttpResponse, Responder,
-};
-
-use mysql;
-
-
 use super::super::AppState;
-use crate::models::{index_models, todo_models};
-pub fn index() -> HttpResponse {
-  HttpResponse::Ok()
-    .content_type("plain/text")
-    .header("X-Hdr", "sample")
-    .body("data")
+use crate::models::todo_models::*;
+use actix_web::{
+  error::Error,
+  http::StatusCode,
+  web::{Data, Json, Path},
+  HttpResponse,
+};
+#[macro_use]
+use serde_json::json;
+
+fn failure(status: u16) -> HttpResponse {
+  let status = StatusCode::from_u16(status).expect("invalide status given");
+  HttpResponse::build(status).finish()
 }
 
-pub fn create(
-  (state, json, req): (Data<AppState>, Json<todo_models::TodoNew>, HttpRequest),
-) -> HttpResponse {
-  let db = &state.db;
-  let last_id = db
-    .prep_exec(
-      "INSERT INTO todo (name) VALUES (:name)",
-      params! {"name" => &json.name},
-    )
-    .unwrap()
-    .last_insert_id();
-
-  HttpResponse::Ok()
+fn success(status: u16, json_str: mysql::serde_json::Value) -> HttpResponse {
+  let status = StatusCode::from_u16(status).expect("invalide status given");
+  HttpResponse::build(status)
     .content_type("application/json")
-    .json(todo_models::TodoIDResponse { id: last_id })
+    .json(json_str)
 }
 
-pub fn read(
-  (state, path, req): (Data<AppState>, Path<todo_models::TodoPath>, HttpRequest),
-) -> HttpResponse {
-  let db = &state.db;
+fn exist_check(state: &Data<AppState>, id: String) -> Result<bool, Error> {
+  let _: Todo = match state.first_sql("SELECT * FROM todo WHERE id = ?", (id,))? {
+    None => return Ok(false),
+    Some(todo) => todo,
+  };
+  return Ok(true);
+}
 
-  // TODO 存在しないIDに対するハンドリング
-
-  let mut row = db
-    .first_exec(
-      "SELECT * FROM todo WHERE id = :id",
-      params! {"id" => &path.id},
-    )
-    .unwrap()
-    .unwrap();
-
-  let todo = todo_models::Todo {
-    id: row.take("id").unwrap(),
-    name: row.take("name").unwrap(),
-    created_at: row.take("create_date").unwrap(),
-    updated_at: row.take("update_date").unwrap(),
+pub fn read((state, path): (Data<AppState>, Path<TodoPath>)) -> Result<HttpResponse, Error> {
+  let todo: Todo = match state.first_sql("SELECT * FROM todo WHERE id = ?", (&path.id,))? {
+    None => return Ok(failure(403)),
+    Some(todo) => todo,
   };
 
-  HttpResponse::Ok()
-    .content_type("application/json")
-    .json(todo.to_json())
+  println!("{:?}", todo);
+
+  Ok(success(
+    200,
+    json!({
+      "id": todo.id,
+      "name": todo.name,
+      "created_at": todo.created_at.to_string(),
+      "updated_at": todo.updated_at.to_string(),
+    }),
+  ))
 }
 
-// pub fn update((path, req): (Path<index_models::PathPath>, HttpRequest)) -> HttpResponse {
-//   HttpResponse::Ok()
-//     .content_type("application/json")
-//     .json(index_models::PathResponse {
-//       string: path.string.to_string(),
-//       integer: path.integer,
-//       float: path.float,
-//     })
-// }
+pub fn create((state, json): (Data<AppState>, Json<TodoNew>)) -> Result<HttpResponse, Error> {
+  state.exec_sql("INSERT INTO todo (name) VALUES (?)", (&json.name,))?;
 
-// pub fn delete((path, req): (Path<index_models::PathPath>, HttpRequest)) -> HttpResponse {
-//   HttpResponse::Ok()
-//     .content_type("application/json")
-//     .json(index_models::PathResponse {
-//       string: path.string.to_string(),
-//       integer: path.integer,
-//       float: path.float,
-//     })
-// }
+  Ok(success(200, json!("")))
+}
+
+pub fn update(
+  (state, json, path): (Data<AppState>, Json<TodoNew>, Path<TodoPath>),
+) -> Result<HttpResponse, Error> {
+  if !exist_check(&state, path.id.to_string())? {
+    return Ok(failure(404));
+  }
+
+  state.exec_sql(
+    "UPDATE todo SET name = ? WHERE id = ?",
+    (&json.name, &path.id),
+  )?;
+
+  Ok(success(200, json!("")))
+}
+
+pub fn delete((state, path): (Data<AppState>, Path<TodoPath>)) -> Result<HttpResponse, Error> {
+  if !exist_check(&state, path.id.to_string())? {
+    return Ok(failure(404));
+  }
+  state.exec_sql("DELETE FROM todo WHERE id = ?", (&path.id,))?;
+
+  Ok(success(200, json!("")))
+}

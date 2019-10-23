@@ -7,7 +7,7 @@ pub fn routes(app: &mut web::ServiceConfig) {
     .service(
       web::scope("/params")
         .route(
-          "path/{string}/{integer}/{float}",
+          "path/{f_str}/{f_int}/{f_flt}",
           web::get().to(index_controllers::path),
         )
         .route("query", web::get().to(index_controllers::query))
@@ -15,16 +15,12 @@ pub fn routes(app: &mut web::ServiceConfig) {
     )
     .service(
       web::scope("/todo")
-        .service(
-          web::resource("")
-            .route(web::get().to(index_controllers::index))
-            .route(web::post().to(todo_controllers::create)),
-        )
+        .service(web::resource("").route(web::post().to(todo_controllers::create)))
         .service(
           web::resource("/{id}")
             .route(web::get().to(todo_controllers::read))
-            .route(web::post().to(index_controllers::index))
-            .route(web::delete().to(index_controllers::index)),
+            .route(web::put().to(todo_controllers::update))
+            .route(web::delete().to(todo_controllers::delete)),
         ),
     );
 }
