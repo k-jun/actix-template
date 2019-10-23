@@ -29,6 +29,25 @@ fn exist_check(state: &Data<AppState>, id: String) -> Result<bool, Error> {
   return Ok(true);
 }
 
+pub fn index(state: Data<AppState>) -> Result<HttpResponse, Error> {
+  let todos: Vec<Todo> = state.query_sql("SELECT * FROM todo", ())?;
+
+  Ok(success(
+    200,
+    json!({ "todos": todos
+    .iter()
+    .map(|todo| {
+      json!({
+        "id": todo.id,
+        "name": todo.name,
+        "created_at": todo.created_at.to_string(),
+        "updated_at": todo.updated_at.to_string(),
+      })
+    })
+    .collect::<Vec<mysql::serde_json::Value>>() }),
+  ))
+}
+
 pub fn read((state, path): (Data<AppState>, Path<TodoPath>)) -> Result<HttpResponse, Error> {
   let todo: Todo = match state.first_sql("SELECT * FROM todo WHERE id = ?", (&path.id,))? {
     None => return Ok(failure(403)),
